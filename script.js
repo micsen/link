@@ -48,10 +48,7 @@ function strtoarr (str) {
   }
 window.onload = function () {
     // get query string
-    console.log(window.location.search)
     var query = window.location.search.substring(1)
-    console.log(query)
-    const clearText = JSON.stringify(links.private)
     // encrypt
 /*    encrypt(clearText, query, salt(), (ciphertext, salt) => {
         console.log(JSON.stringify(salt))
