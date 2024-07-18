@@ -38,7 +38,7 @@ function decrypt(cyp, pas, slt, fnc) {
 }
 
 
-const links = {
+const encLinks = {
   enc: {
     private: {
       salt: [226, 174, 184, 161, 122, 230, 12, 29, 100, 98, 148, 255, 157, 136, 169, 52],
@@ -46,11 +46,23 @@ const links = {
     }
   }
 }
+
+function buildLinks(links) {
+  links.forEach((link) => {
+    console.log(link)
+    document.getElementById('links').innerHTML += `
+                <a class="link" href="${link.link}" target="_blank">
+                    <i class="${link.icon}">&nbsp;</i>${link.text}
+                </a>`
+  })
+}
+
 window.onload = function () {
   let links
   try {
     // get query string
     var query = window.location.search.substring(1)
+    console.log(query)
     // encrypt
     /*const clearText = JSON.stringify(links.private)
     encrypt(clearText, query, salt(), (ciphertext, salt) => {
@@ -61,12 +73,16 @@ window.onload = function () {
 
     //decrypt
     const key = query.split("=")[0]
-    const enc = links.enc[key]
+    console.log(key)
+    const enc = encLinks.enc[key]
+
 
     decrypt(enc.data, query, enc.salt, (plaintext) => {
       console.log(plaintext)
 
       links = JSON.parse(plaintext).links
+      buildLinks(links)
+
 
     })
   } catch (error) {
@@ -75,14 +91,8 @@ window.onload = function () {
       "link": "https://signal.me/#eu/fTCjmo2joPFpyEVzENn9MK1kllOBWOaJOarM2Mjtj4_AF2--wDNGVKz81fzoNydu",
       "icon": "fa-brands fa-signal-messenger"
     }]
+    buildLinks(links)
   }
-  links.forEach((link) => {
-    console.log(link)
-    document.getElementById('links').innerHTML += `
-                <a class="link" href="${link.link}" target="_blank">
-                    <i class="${link.icon}">&nbsp;</i>${link.text}
-                </a>`
-  })
 
 
 }
