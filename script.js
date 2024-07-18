@@ -59,6 +59,13 @@ function buildLinks(links) {
 
 window.onload = function () {
   let links
+  // public links
+  buildLinks[
+    {
+      "text": "Signal",
+      "link": "https://signal.me/#eu/fTCjmo2joPFpyEVzENn9MK1kllOBWOaJOarM2Mjtj4_AF2--wDNGVKz81fzoNydu",
+      "icon": "fa-brands fa-signal-messenger"
+    }]
   try {
     // get query string
     var query = window.location.search.substring(1)
@@ -73,7 +80,6 @@ window.onload = function () {
 
     //decrypt
     const key = query.split("=")[0]
-    console.log(key)
     const enc = encLinks.enc[key]
 
 
@@ -86,12 +92,6 @@ window.onload = function () {
 
     })
   } catch (error) {
-    links = [{
-      "text": "Signal",
-      "link": "https://signal.me/#eu/fTCjmo2joPFpyEVzENn9MK1kllOBWOaJOarM2Mjtj4_AF2--wDNGVKz81fzoNydu",
-      "icon": "fa-brands fa-signal-messenger"
-    }]
-    buildLinks(links)
   }
 
 
