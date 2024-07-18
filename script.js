@@ -60,12 +60,12 @@ function buildLinks(links) {
 window.onload = function () {
   let links
   // public links
-  buildLinks[
+  buildLinks([
     {
       "text": "Signal",
       "link": "https://signal.me/#eu/fTCjmo2joPFpyEVzENn9MK1kllOBWOaJOarM2Mjtj4_AF2--wDNGVKz81fzoNydu",
       "icon": "fa-brands fa-signal-messenger"
-    }]
+    }])
   try {
     // get query string
     var query = window.location.search.substring(1)
