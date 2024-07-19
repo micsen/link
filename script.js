@@ -64,7 +64,7 @@ window.onload = function () {
     {
       "text": "Signal",
       "link": "https://signal.me/#eu/fTCjmo2joPFpyEVzENn9MK1kllOBWOaJOarM2Mjtj4_AF2--wDNGVKz81fzoNydu",
-      "icon": "fa-brands fa-signal-messenger"
+      "icon": "fa-brands fa-signal-messenger" // fontawesome icon
     }])
   try {
     // get query string
