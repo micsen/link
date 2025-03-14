@@ -1,0 +1,100 @@
+/* Reset some default browser styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f7f7f7;
+    color: #333;
+}
+
+header {
+    background-color: #ff69b4;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 0.5em;
+}
+
+header p {
+    font-size: 1.2em;
+}
+
+.content {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.content h2 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.content h3 {
+    font-size: 1.5em;
+    color: #ff69b4;
+    margin-top: 20px;
+}
+
+.content p {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+}
+
+.content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+    opacity: 0; /* Start with images hidden */
+    transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+.content img.animate-img {
+    opacity: 1;
+    transform: scale(1.05); /* Slight zoom in */
+}
+
+.content img:hover {
+    transform: scale(1.1); /* Zoom effect when hovered */
+}
+
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+}
+
+.fade-in:nth-child(even) {
+    animation-delay: 0.5s; /* Stagger animations slightly */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+footer {
+    background-color: #ff69b4;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
