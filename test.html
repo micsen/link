@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke Microphone Tips</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            color: #fff;
+        }
+
+        header {
+            background-color: #444;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1, h2, p {
+            margin: 0.5em 0;
+        }
+
+        .slider {
+            position: relative;
+            max-width: 100%;
+            margin: 20px auto;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .slides {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .slide {
+            min-width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .slide img {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .navigation {
+            text-align: center;
+            margin: 20px;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background-color: #666;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #888;
+        }
+
+        footer {
+            background-color: #333;
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Master Your Karaoke Performance</h1>
+        <h2>How to Hold a Microphone Like a Pro</h2>
+    </header>
+
+    <div class="slider">
+        <div class="slides" id="slides">
+            <div class="slide">
+                <img src="https://via.placeholder.com/800x400?text=Confident+Grip" alt="Confident Grip">
+                <h3>The Confident Grip</h3>
+                <p>Hold the microphone firmly but comfortably, close to your mouth for clear vocals.</p>
+                <p><em>Tip: Avoid covering the grille to maintain sound quality.</em></p>
+            </div>
+            <div class="slide">
+                <img src="https://via.placeholder.com/800x400?text=Relaxed+Performer" alt="Relaxed Performer">
+                <h3>The Relaxed Performer</h3>
+                <p>Lightly hold the microphone at a slight angle for a natural and stylish look.</p>
+                <p><em>Tip: Keep the mic steady to avoid feedback.</em></p>
+            </div>
+            <div class="slide">
+                <img src="https://via.placeholder.com/800x400?text=Dynamic+Performer" alt="Dynamic Performer">
+                <h3>The Dynamic Performer</h3>
+                <p>Switch hands smoothly or use both hands for emotional songs.</p>
+                <p><em>Tip: Practice switching hands without making noise.</em></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button onclick="moveSlide(-1)">Previous</button>
+        <button onclick="moveSlide(1)">Next</button>
+    </div>
+
+    <footer>
+        <p>Ready to sing like a pro? Check out more tips and tricks on our blog!</p>
+        <p><a href="#" style="color: #ccc;">Contact Us</a> | <a href="#" style="color: #ccc;">Follow on Social Media</a></p>
+    </footer>
+
+    <script>
+        let currentSlide = 0;
+
+        function moveSlide(direction) {
+            const slides = document.getElementById('slides');
+            const totalSlides = slides.children.length;
+            currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+            slides.style.transform = `translateX(-${currentSlide * 100}%)`;
+        }
+    </script>
+</body>
+</html>
