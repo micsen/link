@@ -1,3 +1,35 @@
+// Plays a short, sharp clicker-training "click" sound using the Web Audio API
+// so no external audio file is needed.
+let clickerCtx
+function playClick() {
+  try {
+    clickerCtx = clickerCtx || new (window.AudioContext || window.webkitAudioContext)()
+    const ctx = clickerCtx
+    // Resume in case the context was suspended before a user gesture.
+    if (ctx.state === 'suspended') ctx.resume()
+
+    const now = ctx.currentTime
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    // A high, quickly-decaying blip mimics a mechanical clicker.
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(2500, now)
+    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.03)
+
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.002)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.06)
+  } catch (error) {
+    console.log(error)
+  }
+}
+
 function strtoarr(str) {
   return new TextEncoder().encode(str)
 }
