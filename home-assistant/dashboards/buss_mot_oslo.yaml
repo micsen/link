@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# Avgangstavle: buss mot Oslo fra Trygve Strømbergs vei
+#
+# Bruk enten hele fila som et YAML-dashbord (Innstillinger -> Dashbord ->
+# Legg til dashbord -> "I YAML"), eller kopier enkeltkortene inn i et
+# eksisterende dashbord via "Rediger dashbord -> Legg til kort -> Manuelt".
+# Krever pakka home-assistant/packages/buss_mot_oslo.yaml.
+# ---------------------------------------------------------------------------
+title: Buss
+views:
+  - title: Mot Oslo
+    path: oslo
+    icon: mdi:bus
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          # Stor nedtelling til neste avgang.
+          - type: markdown
+            content: |
+              {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+              {% if d | count == 0 %}
+              # Ingen busser
+              Ingen avganger mot Oslo de neste to timene.
+              {% else %}
+              {% set n = d[0] %}
+              {% set dot = '🔴' if n.minutes <= 3 else ('🟡' if n.minutes <= 10 else '🟢') %}
+              # {{ dot }} {% if n.cancelled %}Innstilt{% elif n.minutes <= 0 %}Går nå{% else %}{{ n.minutes }} min{% endif %}
+              ### Linje {{ n.line }} → {{ n.destination }}
+              Avgang {{ n.time }}{% if n.delay >= 1 %} · {{ n.delay }} min forsinket (rute {{ n.aimed_time }}){% endif %}{% if not n.realtime %} · rutetabell, ikke sanntid{% endif %}
+              {% endif %}
+
+          # Avgangstavle.
+          - type: markdown
+            content: |
+              ### 🚌 {{ state_attr('sensor.buss_mot_oslo_data', 'stop_name') }} → Oslo
+              {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+              {% if d | count == 0 %}
+              _Ingen avganger å vise._
+              {% else %}
+              | Linje | Mot | Avgang | Om |
+              |:---|:---|---:|---:|
+              {% for b in d[:8] %}| **{{ b.line }}** | {{ b.destination }} | {{ b.time }}{% if b.delay >= 1 %} ⚠️{% endif %} | {% if b.cancelled %}Innstilt{% elif b.minutes <= 0 %}**nå**{% else %}**{{ b.minutes }} min**{% endif %} |
+              {% endfor %}
+              {% endif %}
+              <small>Sanntid fra Entur · oppdatert {{ as_timestamp(states('sensor.buss_mot_oslo_data'), 0) | timestamp_custom('%H:%M:%S', true) }}</small>
+
+      - type: grid
+        cards:
+          - type: glance
+            title: Status
+            entities:
+              - entity: sensor.buss_mot_oslo
+                name: Neste
+              - entity: sensor.buss_mot_oslo_neste
+                name: Deretter
+              - entity: sensor.entur_tsv_raw
+                name: Avganger totalt
+
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: binary_sensor.buss_mot_oslo_avvik
+                state: "on"
+            card:
+              type: markdown
+              content: |
+                ⚠️ **Avvik på neste avgang** - den er forsinket eller innstilt.
+
+          - type: entities
+            title: Feilsøking
+            entities:
+              - entity: sensor.buss_mot_oslo_data
+                name: Sist beregnet
+              - entity: sensor.entur_tsv_raw
+                name: Rådata fra Entur

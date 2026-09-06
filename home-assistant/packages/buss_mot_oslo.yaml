@@ -1,0 +1,158 @@
+# ---------------------------------------------------------------------------
+# Bussavganger mot Oslo fra Trygve Strømbergs vei
+#
+# Henter sanntidsdata fra Enturs JourneyPlanner v3 (samme kilde som Ruter-appen)
+# og bygger en avgangstavle. Ingen HACS eller custom cards trengs.
+#
+# ====> KONFIGURASJON: se linjene merket "ENDRE MEG" nedenfor.             <====
+# ---------------------------------------------------------------------------
+
+# 1) Rådata fra Entur -------------------------------------------------------
+rest:
+  - resource: https://api.entur.io/journey-planner/v3/graphql
+    method: POST
+    scan_interval: 60
+    timeout: 20
+    headers:
+      Content-Type: application/json
+      # ENDRE MEG (valgfritt): Entur ber om formatet <selskap>-<applikasjon>.
+      ET-Client-Name: micsen-homeassistant
+    # ENDRE MEG: bytt NSR:StopPlace:XXXXX med IDen for Trygve Strømbergs vei.
+    # Slå den opp på https://stoppested.entur.org - søk på navnet og kopier
+    # "NSR:StopPlace:...". Behold de escapede anførselstegnene (\").
+    payload: >-
+      {"query": "{stopPlace(id: \"NSR:StopPlace:XXXXX\") { id name estimatedCalls(timeRange: 7200, numberOfDepartures: 30) { realtime cancellation aimedDepartureTime expectedDepartureTime destinationDisplay { frontText } quay { id publicCode } serviceJourney { line { publicCode name transportMode } } } } }"}
+    sensor:
+      - name: Entur TSV raw
+        unique_id: entur_tsv_raw
+        icon: mdi:api
+        unit_of_measurement: avganger
+        value_template: >-
+          {{ (value_json.data.stopPlace.estimatedCalls | default([])) | count }}
+        json_attributes_path: "$.data.stopPlace"
+        json_attributes:
+          - name
+          - estimatedCalls
+
+# 2) Filtrering og nedtelling ----------------------------------------------
+template:
+  # Tidsstyrt sensor som holder selve avgangslista. Tilstanden er tidspunktet
+  # for siste beregning, slik at kortene under alltid regner på ferske minutter.
+  - trigger:
+      - platform: state
+        entity_id: sensor.entur_tsv_raw
+      - platform: time_pattern
+        seconds: "/30"
+      - platform: homeassistant
+        event: start
+    sensor:
+      - name: Buss mot Oslo data
+        unique_id: buss_mot_oslo_data
+        icon: mdi:database-clock
+        device_class: timestamp
+        state: "{{ now().isoformat() }}"
+        attributes:
+          stop_name: >-
+            {{ state_attr('sensor.entur_tsv_raw', 'name')
+               | default('Trygve Strømbergs vei', true) }}
+          departures: >-
+            {# ENDRE MEG (A): stikkord som kjennetegner retningen mot Oslo.
+               Matcher som delstreng i destinasjonsteksten, uavhengig av store
+               og små bokstaver. #}
+            {% set keywords = ['oslo', 'bussterminal', 'jernbanetorget', 'helsfyr', 'galgeberg'] %}
+            {# ENDRE MEG (B, valgfritt og mest presist): lås tavla til plattformen
+               som går mot Oslo, f.eks. ['NSR:Quay:12345']. Er lista tom, brukes
+               stikkordene over. Quay-IDene finner du i attributtet
+               estimatedCalls på sensor.entur_tsv_raw (Utviklerverktøy -> Tilstander). #}
+            {% set quays = [] %}
+            {% set calls = state_attr('sensor.entur_tsv_raw', 'estimatedCalls') or [] %}
+            {% set ns = namespace(out=[]) %}
+            {% for c in calls %}
+              {% set dest = c.destinationDisplay.frontText | default('', true) %}
+              {% set quay_id = c.quay.id | default('', true) %}
+              {% set mode = c.serviceJourney.line.transportMode | default('', true) | lower %}
+              {% set hit_dest = (keywords | select('in', dest | lower) | list | count) > 0 %}
+              {% set hit_quay = quay_id in quays %}
+              {% if mode == 'bus'
+                    and ((quays | count > 0 and hit_quay)
+                         or (quays | count == 0 and hit_dest)) %}
+                {% set expected = as_datetime(c.expectedDepartureTime) %}
+                {% set aimed = as_datetime(c.aimedDepartureTime) %}
+                {% if expected is not none %}
+                  {% set mins = ((expected - now()).total_seconds() / 60) | round(0, 'floor') | int %}
+                  {% if mins >= -1 %}
+                    {% set delay = 0 if aimed is none
+                       else ((expected - aimed).total_seconds() / 60) | round(0) | int %}
+                    {% set ns.out = ns.out + [{
+                      'line': c.serviceJourney.line.publicCode | default('?', true),
+                      'destination': dest,
+                      'minutes': mins,
+                      'time': expected.strftime('%H:%M'),
+                      'aimed_time': '' if aimed is none else aimed.strftime('%H:%M'),
+                      'delay': delay,
+                      'realtime': c.realtime | default(false, true),
+                      'cancelled': c.cancellation | default(false, true),
+                      'platform': c.quay.publicCode | default('', true),
+                      'quay': quay_id,
+                      'sort': expected.timestamp()
+                    }] %}
+                  {% endif %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.out | sort(attribute='sort') | list }}
+
+  # Vanlige templatesensorer som følger dataserien over.
+  - sensor:
+      - name: Buss mot Oslo
+        unique_id: buss_mot_oslo
+        icon: mdi:bus-clock
+        unit_of_measurement: min
+        state: >-
+          {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+          {{ d[0].minutes if d | count > 0 else 'unknown' }}
+        attributes:
+          line: >-
+            {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+            {{ d[0].line if d | count > 0 else '' }}
+          destination: >-
+            {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+            {{ d[0].destination if d | count > 0 else '' }}
+          departure_time: >-
+            {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+            {{ d[0].time if d | count > 0 else '' }}
+          delay: >-
+            {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+            {{ d[0].delay if d | count > 0 else 0 }}
+          realtime: >-
+            {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+            {{ d[0].realtime if d | count > 0 else false }}
+          count: >-
+            {{ (state_attr('sensor.buss_mot_oslo_data', 'departures') or []) | count }}
+
+      - name: Buss mot Oslo neste
+        unique_id: buss_mot_oslo_neste
+        icon: mdi:bus-multiple
+        unit_of_measurement: min
+        state: >-
+          {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+          {{ d[1].minutes if d | count > 1 else 'unknown' }}
+
+    binary_sensor:
+      - name: Buss mot Oslo avvik
+        unique_id: buss_mot_oslo_avvik
+        device_class: problem
+        icon: mdi:bus-alert
+        state: >-
+          {% set d = state_attr('sensor.buss_mot_oslo_data', 'departures') or [] %}
+          {{ d | count > 0 and (d[0].cancelled or d[0].delay >= 3) }}
+
+# 3) Valgfritt --------------------------------------------------------------
+# Rådataene er et stort attributt som ikke hører hjemme i historikken. Legg
+# dette inn i din eksisterende recorder-blokk i configuration.yaml (det kan
+# ikke stå her hvis du allerede har en recorder-blokk et annet sted):
+#
+# recorder:
+#   exclude:
+#     entities:
+#       - sensor.entur_tsv_raw
