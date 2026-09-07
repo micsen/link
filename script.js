@@ -1,6 +1,9 @@
-// Plays a short, sharp clicker-training "click" sound using the Web Audio API
-// so no external audio file is needed.
+// Plays a sharp, metallic clicker-training "click" using the Web Audio API
+// so no external audio file is needed. A real box clicker makes a two-part
+// metallic snap (press, then release), built here from a filtered noise
+// transient plus short, high, inharmonic metallic partials.
 let clickerCtx
+let clickerNoise
 function playClick() {
   try {
     clickerCtx = clickerCtx || new (window.AudioContext || window.webkitAudioContext)()
@@ -8,23 +11,55 @@ function playClick() {
     // Resume in case the context was suspended before a user gesture.
     if (ctx.state === 'suspended') ctx.resume()
 
+    // One short white-noise buffer, reused for every click.
+    if (!clickerNoise) {
+      const len = Math.floor(ctx.sampleRate * 0.05)
+      clickerNoise = ctx.createBuffer(1, len, ctx.sampleRate)
+      const ch = clickerNoise.getChannelData(0)
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1
+    }
+
+    // One metallic "snap": a bandpassed noise transient plus inharmonic
+    // partials that ring for a few milliseconds.
+    function snap(at, level) {
+      // Noise transient — the physical "tick" of the metal.
+      const src = ctx.createBufferSource()
+      src.buffer = clickerNoise
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'
+      bp.frequency.value = 5000
+      bp.Q.value = 1.2
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(0.0001, at)
+      ng.gain.exponentialRampToValueAtTime(level, at + 0.0004)
+      ng.gain.exponentialRampToValueAtTime(0.0001, at + 0.012)
+      src.connect(bp)
+      bp.connect(ng)
+      ng.connect(ctx.destination)
+      src.start(at)
+      src.stop(at + 0.02)
+
+      // Inharmonic metallic partials give the bright, ringing "sproing".
+      const partials = [3100, 4700, 6300, 8200]
+      partials.forEach((f, idx) => {
+        const osc = ctx.createOscillator()
+        osc.type = 'triangle'
+        osc.frequency.value = f
+        const g = ctx.createGain()
+        const peak = level * (0.5 / (idx + 1))
+        g.gain.setValueAtTime(0.0001, at)
+        g.gain.exponentialRampToValueAtTime(peak, at + 0.0006)
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03)
+        osc.connect(g)
+        g.connect(ctx.destination)
+        osc.start(at)
+        osc.stop(at + 0.035)
+      })
+    }
+
     const now = ctx.currentTime
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-
-    // A high, quickly-decaying blip mimics a mechanical clicker.
-    osc.type = 'square'
-    osc.frequency.setValueAtTime(2500, now)
-    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.03)
-
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.002)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05)
-
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start(now)
-    osc.stop(now + 0.06)
+    snap(now, 0.5)              // press
+    snap(now + 0.045, 0.28)     // release (softer) — the classic "click-clack"
   } catch (error) {
     console.log(error)
   }
