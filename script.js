@@ -1,7 +1,9 @@
-// Plays a sharp, metallic clicker-training "click" using the Web Audio API
-// so no external audio file is needed. A real box clicker makes a two-part
-// metallic snap (press, then release), built here from a filtered noise
-// transient plus short, high, inharmonic metallic partials.
+// Plays a sharp dog-clicker "click-clack" using the Web Audio API so no
+// external audio file is needed. A real box clicker is a BROADBAND transient
+// (no detectable pitch) with energy around 2-4 kHz and a near-instant attack
+// and decay. So this is a very short burst of filtered noise — no tonal
+// partials, which is what made earlier versions ring instead of snap — fired
+// twice: press, then a slightly brighter, softer release.
 let clickerCtx
 let clickerNoise
 function playClick() {
@@ -19,47 +21,43 @@ function playClick() {
       for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1
     }
 
-    // One metallic "snap": a bandpassed noise transient plus inharmonic
-    // partials that ring for a few milliseconds.
-    function snap(at, level) {
-      // Noise transient — the physical "tick" of the metal.
+    // One sharp broadband "snap".
+    //   peak   — loudness (0-1)
+    //   tone   — bandpass centre in Hz (higher = brighter/sharper)
+    //   decay  — seconds to near-silence (tiny = sharp)
+    function snap(at, peak, tone, decay) {
       const src = ctx.createBufferSource()
       src.buffer = clickerNoise
+
+      // Highpass strips low-end mud so the click reads crisp and sharp.
+      const hp = ctx.createBiquadFilter()
+      hp.type = 'highpass'
+      hp.frequency.value = 1800
+
+      // Broad bandpass (low Q) keeps it broadband, peaking in the 2-4 kHz
+      // band a dog clicker lives in — not a pitched ring.
       const bp = ctx.createBiquadFilter()
       bp.type = 'bandpass'
-      bp.frequency.value = 5000
-      bp.Q.value = 1.2
-      const ng = ctx.createGain()
-      ng.gain.setValueAtTime(0.0001, at)
-      ng.gain.exponentialRampToValueAtTime(level, at + 0.0004)
-      ng.gain.exponentialRampToValueAtTime(0.0001, at + 0.012)
-      src.connect(bp)
-      bp.connect(ng)
-      ng.connect(ctx.destination)
-      src.start(at)
-      src.stop(at + 0.02)
+      bp.frequency.value = tone
+      bp.Q.value = 0.7
 
-      // Inharmonic metallic partials give the bright, ringing "sproing".
-      const partials = [3100, 4700, 6300, 8200]
-      partials.forEach((f, idx) => {
-        const osc = ctx.createOscillator()
-        osc.type = 'triangle'
-        osc.frequency.value = f
-        const g = ctx.createGain()
-        const peak = level * (0.5 / (idx + 1))
-        g.gain.setValueAtTime(0.0001, at)
-        g.gain.exponentialRampToValueAtTime(peak, at + 0.0006)
-        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03)
-        osc.connect(g)
-        g.connect(ctx.destination)
-        osc.start(at)
-        osc.stop(at + 0.035)
-      })
+      const g = ctx.createGain()
+      // Near-instant attack, then a fast linear collapse to silence.
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(peak, at + 0.0003)
+      g.gain.linearRampToValueAtTime(0, at + decay)
+
+      src.connect(hp)
+      hp.connect(bp)
+      bp.connect(g)
+      g.connect(ctx.destination)
+      src.start(at)
+      src.stop(at + decay + 0.005)
     }
 
     const now = ctx.currentTime
-    snap(now, 0.5)              // press
-    snap(now + 0.045, 0.28)     // release (softer) — the classic "click-clack"
+    snap(now, 0.9, 3000, 0.004)          // press  — sharp, full-bodied
+    snap(now + 0.05, 0.55, 3600, 0.003)  // release — brighter, shorter, softer
   } catch (error) {
     console.log(error)
   }
